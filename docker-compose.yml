@@ -1,0 +1,61 @@
+# Docker Compose for Azure Service Bus POC Local Development
+
+version: '3.8'
+
+services:
+  # Azure Service Bus Emulator (using Azurite as a placeholder)
+  # Note: There's no official Azure Service Bus emulator in Docker
+  # For local development, you'll need to either:
+  # 1. Use Azure Service Bus in the cloud
+  # 2. Use a mock implementation
+  # 3. Use RabbitMQ as a substitute for testing
+  
+  # For this POC, we'll set up the applications to run locally
+  
+  lms-wcf-service:
+    build:
+      context: .
+      dockerfile: LMS.WcfService/Dockerfile
+    ports:
+      - "5000:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ServiceBus__ConnectionString=Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=test;UseDevelopmentEmulator=true
+    depends_on:
+      - rabbitmq
+    networks:
+      - servicebus-poc
+
+  erp-consumer-service:
+    build:
+      context: .
+      dockerfile: ERP.ConsumerService/Dockerfile
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      - ServiceBus__ConnectionString=Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=test;UseDevelopmentEmulator=true
+    depends_on:
+      - rabbitmq
+    networks:
+      - servicebus-poc
+
+  # RabbitMQ as Service Bus substitute for local testing
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-servicebus-poc
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - servicebus-poc
+
+networks:
+  servicebus-poc:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:
